@@ -3,17 +3,47 @@ const mysql = require('mysql')
 const cors = require('cors')
 const multer  = require('multer');
 const path = require('path'); 
+// const { spawn } = require('child_process');
 
 const app = express()
 app.use(express.json())
 app.use(cors())
 
-
-
 const storage = multer.memoryStorage(); 
 
 const upload = multer({ storage: storage });
 
+// const image = multer({
+//     storage: storage
+//   }).single('image');
+
+// app.post('/searchimage', image, (req, res) => {
+//     if (!req.file) {
+//       return res.status(400).send('No files were uploaded.');
+//     }
+  
+//     // Path to the Python script
+//     const pythonScriptPath = 'search.py';
+  
+//     // Spawn a new process running the Python script
+//     const pythonProcess = spawn('python', [pythonScriptPath, req.file.path]);
+  
+//     // Handle Python script output
+//     pythonProcess.stdout.on('data', (data) => {
+//       console.log(`stdout: ${data}`);
+//       res.send(data); // Send Python script output back to the client
+//     });
+  
+//     pythonProcess.stderr.on('data', (data) => {
+//       console.error(`stderr: ${data}`);
+//       res.status(500).send('Internal Server Error');
+//     });
+  
+//     pythonProcess.on('close', (code) => {
+//       console.log(`child process exited with code ${code}`);
+//     });
+//   });
+  
 app.post('/upload', upload.single('image'), function (req, res, next) {
   const file = req.file;
 
@@ -48,8 +78,6 @@ app.post('/upload', upload.single('image'), function (req, res, next) {
 
 
 
-
-
 const db = mysql.createConnection({
     host: "localhost",
     user: 'root',
@@ -80,7 +108,7 @@ app.get('/Search', (req, res) => {
             JOIN
                 Emotion e ON t.EmoID = e.EmoID
             ORDER BY 
-                t.Date_time;
+                t.Date_time DESC;
                 `;
     
     db.query(sql, (err, data) => {

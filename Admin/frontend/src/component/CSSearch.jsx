@@ -14,7 +14,6 @@ import {
   InputAdornment,
 } from "@material-ui/core";
 import PageHeader from './UserPageHeader'
-import AddIcon from "@material-ui/icons/Add";
 import UserForm from './UserForm'
 import PersonSearchIcon from '@mui/icons-material/PersonSearch';
 import './../css/Search.css'
@@ -22,7 +21,7 @@ import './../css/Search.css'
 const useStyles = makeStyles((theme) => ({
   pageContent: {
     padding: theme.spacing(3),
-    width:'90%',
+    // width:'90%',
     height: 'auto'
   },
   searchInput: {
@@ -74,11 +73,35 @@ export default function Users() {
     });
   };
 
-  
-
   const [openPopup, setOpenPopup] = useState(false);
   const [recordForEdit, setRecordForEdit] = useState(null);
 
+  // const handleSearchImage = async () => {
+  //   const fileInput = document.createElement('input');
+  //   fileInput.type = 'file';
+  //   fileInput.accept = 'image/*';
+  //   fileInput.onchange = async (event) => {
+  //     const file = event.target.files[0];
+  //     if (!file) return;
+  
+  //     const formData = new FormData();
+  //     formData.append('image', file);
+  
+  //     try {
+  //       const response = await axios.post('http://localhost:8081/searchimage', formData, {
+  //         headers: {
+  //           'Content-Type': 'multipart/form-data'
+  //         }
+  //       });
+  //       setRecords(response.data); // Update the records state with the search results
+  //     } catch (error) {
+  //       console.error('Failed to search image:', error);
+  //     }
+  //   };
+  
+  //   fileInput.click();
+  // };
+  
   return (
     <>
       <PageHeader
@@ -100,16 +123,13 @@ export default function Users() {
             }}
             onChange={handleSearch}
           />
-          <Controls.Button
+          {/* <Controls.Button
             text="!!search img!!"
             variant="outlined"
-            // startIcon={<AddIcon />}
+            startIcon={<Search />}
             className={classes.newButton}
-            // onClick={() => {
-            //   setOpenPopup(true);
-            //   setRecordForEdit(null);
-            // }}
-          />
+            onClick={handleSearchImage}
+          /> */}
         </Toolbar>
         <TblContainer style={{ maxHeight: '600px'}}>
             
