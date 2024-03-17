@@ -386,35 +386,53 @@ app.post('/insertSchedule', async (req, res) => {
 
     try {
         for (const schedule of data) {
-        const {
-            title,
-            startDate,
-            endDate
-        } = schedule;
+            const {
+                title,
+                startDate,
+                endDate
+            } = schedule;
 
-        const [CName, CID] = title.split(' ');
+            const [CName, CID] = title.split(' ');
 
-        const query = `
-            INSERT INTO schedule (CID, CName, Day, StartTime, EndTime, semester, academicYear, CSID)
-            SELECT 
-                ?, -- CID
-                ?, -- CName
-                DAYOFWEEK(?)-1, -- Day (assuming DAYOFWEEK returns 1 for Sunday)
-                TIME(?), -- StartTime
-                TIME(?), -- EndTime
-                ?, -- semester
-                ?, -- academicYear
-                csuser.CSID -- CSID
-            FROM 
-                csuser 
-            WHERE 
-                csuser.CSName = ?;
-        `;
+            const query = `
+                INSERT IGNORE INTO schedule (CID, CName, Day, StartTime, EndTime, semester, academicYear, CSID)
+                SELECT 
+                    ?, -- CID
+                    ?, -- CName
+                    DAYOFWEEK(?)-1, -- Day (assuming DAYOFWEEK returns 1 for Sunday)
+                    TIME(?), -- StartTime
+                    TIME(?), -- EndTime
+                    ?, -- semester
+                    ?, -- academicYear
+                    csuser.CSID -- CSID
+                FROM 
+                    csuser 
+                WHERE 
+                    csuser.CSName = ?
+            `;
 
-        const values = [CID, CName, startDate, startDate, endDate, courseDetails.semester, courseDetails.academicYear, courseDetails.Tname];
+            const dateMap = {
+                mon: "2024-03-04",
+                tue: "2024-03-05",
+                wed: "2024-03-06",
+                thu: "2024-03-07",
+                fri: "2024-03-08",
+                sat: "2024-03-09",
+            };
 
-        await db.query(query, values);
-    }
+            const values = [
+                CID, // CID
+                CName, // CName
+                dateMap[new Date(startDate).toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase()], // Day
+                new Date(startDate).toLocaleString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Bangkok' }), // StartTime
+                new Date(endDate).toLocaleString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Bangkok' }), // EndTime                   
+                courseDetails.semester, // semester
+                courseDetails.academicYear, // academicYear
+                courseDetails.Tname, // CSID
+            ];
+
+            await db.query(query, values);
+        }
 
         console.log('Schedules inserted successfully');
         res.status(200).json({ message: 'Schedules inserted successfully' });
@@ -423,6 +441,7 @@ app.post('/insertSchedule', async (req, res) => {
         res.status(500).json({ error: 'Internal Server Error' });
     }
 });
+
 
 app.listen(8081, () => {
     console.log("listening");

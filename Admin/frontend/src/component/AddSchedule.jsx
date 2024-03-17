@@ -6,6 +6,9 @@ import {
   makeStyles,
   Toolbar,
   InputAdornment,
+  MenuItem,
+  Select,
+  InputLabel,
 } from "@material-ui/core";
 import PageHeader from './UserPageHeader'
 import Button from '@mui/material/Button';
@@ -23,6 +26,7 @@ import { styled } from '@mui/material/styles';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { ViewState } from "@devexpress/dx-react-scheduler";
 import './../css/Schedule.css'
+import FormControl from '@mui/material/FormControl';
 
 
 
@@ -51,11 +55,10 @@ const useStyles = makeStyles((theme) => ({
 
 export default function Users() {
   const classes = useStyles();
-
+  
     const [data, setData] = useState([]);
     const [courseDetails, setCourseDetails] = useState({});
     const [selectedFile, setSelectedFile] = useState(null);
-    
 
     useEffect(() => {
       // ตรวจสอบค่าที่ถูกตั้งค่าหลังจากการทำงานของ handleFileUpload
@@ -76,34 +79,32 @@ export default function Users() {
                 const loadedData = [];
                 let details = {};
                 results.data.forEach((row) => {
-                    const dateMap = {
-                        mon: "2024-03-04",
-                        tue: "2024-03-05",
-                        wed: "2024-03-06",
-                        thu: "2024-03-07",
-                        fri: "2024-03-08",
-                        sat: "2024-03-09",
-                    };
-                    
-                    const dayDate = dateMap[row.Day?.toLowerCase()];
-                    if(dayDate) {
-                        const startDateTime = dayDate + 'T' + row.StartTime.padStart(8, '0');
-                        const endDateTime = dayDate + 'T' + row.EndTime.padStart(8, '0');
-                        
-  
-                        loadedData.push({
-                            title: row.CName + ' ' + row.CID,
-                            startDate: startDateTime,
-                            endDate: endDateTime,
-                        });
-                       
-                        
-                        details = {
-                            semester: row.semester,
-                            academicYear: row.academicYear,
-                            Tname: row.Tname,
-                        };
-                    }
+                  const dateMap = {
+                      mon: "2024-03-04",
+                      tue: "2024-03-05",
+                      wed: "2024-03-06",
+                      thu: "2024-03-07",
+                      fri: "2024-03-08",
+                      sat: "2024-03-09",
+                  };
+              
+                  const dayDate = dateMap[row.Day?.toLowerCase()];
+                  if (dayDate && row.StartTime && row.EndTime) {
+                      const startDateTime = dayDate + 'T' + row.StartTime.padStart(8, '0');
+                      const endDateTime = dayDate + 'T' + row.EndTime.padStart(8, '0');
+              
+                      loadedData.push({
+                          title: row.CName + ' ' + row.CID,
+                          startDate: startDateTime,
+                          endDate: endDateTime,
+                      });
+              
+                      details = {
+                          semester: row.semester,
+                          academicYear: row.academicYear,
+                          Tname: row.Tname,
+                      };
+                  }
                     console.log(loadedData)
                     console.log(row.Tname)
                 });
@@ -161,7 +162,6 @@ export default function Users() {
       />
       <Paper className={classes.pageContent}>
         <Toolbar>
-          
           <div className={classes.uploadButton}>
             <Button
                 component="label"
