@@ -1,0 +1,8 @@
+venv/
+img_test/
+schedule.csv
+suwatchat.csv
+teacher someone.csv
+.git/
+.gitignore
+node_modules/
