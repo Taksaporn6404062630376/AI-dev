@@ -5,49 +5,44 @@ services:
     container_name: frontend
     build: ./Admin/frontend
     ports:
-      - "5041:3000"  # Expose the frontend port
+      - "5041:80"
     volumes:
-      - ./Admin/frontend:/app/frontend  # Mount the frontend directory
+      - ./Admin/frontend:/app/frontend
 
   backend:
     container_name: backend
     build:  ./Admin/Backend
-    volumes:
-      - ./Admin/Backend:/app/backend  # Mount the backend directory
-
-  kiosk:
-    container_name: kiosk
-    build: ./Kiosk
     ports:
-      - "8000:8000"  # Expose the kiosk port
+      - "8081:8081"
     volumes:
-      - ./Kiosk:/app/Kiosk  # Mount the kiosk directory
+      - ./Admin/Backend:/app/backend
 
+# docker run --rm --name db -v mysql_data:/var/lib/ai -p 3306:3306 -p 33060:33060/tcp -d -e MYSQL_ROOT_PASSWORD=password mysql
   db:
     image: mysql:latest
     container_name: db
     restart: always
     environment:
-      MYSQL_DATABASE: ai;
+      MYSQL_ROOT_PASSWORD: password
     ports:
-      - "3306:3306"
+      - :3306
     volumes:
-      - mysql_data_test:/var/lib/ai
+      - mysql_data:/var/lib/ai
 
-
+#docker run -rm --name myadmin -d -p 8080:80 --link db:db phpmyadmin/phpmyadmin
   phpmyadmin:
     image: phpmyadmin/phpmyadmin:latest
-    container_name: phpMyAdmin
+    container_name: phpmyadmin
     restart: always
     ports:
-      - "8080:80"  # Expose phpMyAdmin on port 8080
+      - "8080:80"
     environment:
-      PMA_HOST: db              
-      PMA_PORT: 3306
-      PMA_USER: root
+      PMA_HOST: db            
     depends_on:
       - db
 
 volumes:
-  mysql_data_test:
+  mysql_data:
     driver: local
+
+#docker compose up -d -build

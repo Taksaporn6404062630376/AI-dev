@@ -76,12 +76,15 @@ app.post('/upload', upload.single('image'), function (req, res, next) {
   });
 })
 
-
+// var host = 'localhost';
+// if (process.env.NODE_ENV == 'production'){
+//     host = 'mysql-server'
+// }
 
 const db = mysql.createConnection({
     host: "localhost",
     user: 'root',
-    password: '',
+    password: 'password',
     database: 'ai'
 })
 

@@ -4,7 +4,8 @@ import react from '@vitejs/plugin-react'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  build: {chunkSizeWarningLimit: 2000},
   server: {
-    port: 5041, // แก้ตรงนี้เป็นพอร์ตที่คุณต้องการ
+    port: 5041,
   },
 })

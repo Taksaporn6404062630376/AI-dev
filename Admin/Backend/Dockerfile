@@ -1,15 +1,13 @@
-# Use the official Node.js image as base image
-FROM node:14 AS backend-builder
+FROM node:16.13.1
 
-# Set the working directory in the container
+ENV NODE_ENV=production
+
 WORKDIR /app/backend
 
-# Copy package.json and package-lock.json into the container
-COPY ./ package*.json ./
-# Install Node.js dependencies
-RUN npm install
+COPY ["package.json", "package-lock.json", "./"]
 
-COPY ./ server.js ./
+RUN npm install --production
 
-# Run the Node.js application for admin
+COPY . .
+
 CMD ["npm", "start"]
