@@ -1,3 +1,4 @@
+require('dotenv').config()
 const express = require('express');
 const mysql = require('mysql')
 const cors = require('cors')
@@ -8,6 +9,7 @@ const path = require('path');
 const app = express()
 app.use(express.json())
 app.use(cors())
+
 
 const storage = multer.memoryStorage(); 
 
@@ -77,22 +79,30 @@ app.post('/upload', upload.single('image'), function (req, res, next) {
 })
 
 // var host = 'localhost';
-// if (process.env.NODE_ENV == 'production'){
-//     host = 'mysql-server'
+// if (process.env.NODE_ENV == 'production') {
+//     host = 'db';
 // }
 
 const db = mysql.createConnection({
-    host: "localhost",
+    host: 'db',
     user: 'root',
     password: 'password',
     database: 'ai'
-})
+});
+
+
+// const db = mysql.createConnection({
+//     host: process.env.DB_HOST,
+//     user: process.env.DB_USER,
+//     password: process.env.DB_PASSWORD,
+//     database: process.env.DB_DATABASE
+// });
 
 app.get('/' , (re, res) => {
     return res.json("From Backend Side")
 })
 
-app.get('/Search', (req, res) => {
+app.get('/Search', async (req, res) => {
     // const sql = "SELECT * FROM transaction"
     // const sql = "SELECT t.Date_time, t.CSGender, t.CSAge, u.CSName AS UserName, e.EmoName AS EmotionName, t.S_Pic, t.L_Pic FROM Transaction t JOIN `CSUser` u ON t.CSID = u.CSID JOIN Emotion e ON t.EmoID = e.EmoID"
     const sql = `
@@ -121,8 +131,8 @@ app.get('/Search', (req, res) => {
 })
 
 
-app.post('/Login', (req, res) => {
-    const sql = "SELECT * FROM admin WHERE AdUsername = ? AND AdPassword = ? "
+app.post('/Login', async (req, res) => {
+    const sql = "SELECT * FROM admin WHERE AdUername = ? AND AdPassword = ? "
     db.query(sql, [req.body.username, req.body.password], (err, data) => {
         if(err) return res.json("err");
         if(data.length > 0){
@@ -1006,5 +1016,6 @@ app.post('/insertSchedule', async (req, res) => {
 // // });
 
 app.listen(8081, () => {
+    // await initMySQL()
     console.log("listening");
 })

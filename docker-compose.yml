@@ -2,34 +2,44 @@ version: '3.8'
 
 services:
   frontend:
-    container_name: frontend
-    build: ./Admin/frontend
-    ports:
-      - "5041:80"
-    volumes:
-      - ./Admin/frontend:/app/frontend
+      container_name: frontend
+      build: ./Admin/frontend
+      ports:
+        - "5041:80"
+      environment:
+        - NODE_ENV=production
+      volumes:
+        - ./Admin/frontend:/app/frontend
 
   backend:
-    container_name: backend
-    build:  ./Admin/Backend
-    ports:
-      - "8081:8081"
-    volumes:
-      - ./Admin/Backend:/app/backend
+      container_name: backend
+      build: ./Admin/Backend
+      ports:
+        - "8081:8081"
+      depends_on:
+        - db
+      environment:
+        DB_HOST: db
+        DB_USER: root
+        DB_PASSWORD: password
+        DB_DATABASE: ai
+      volumes:
+        - ./Admin/Backend:/app/backend
 
-# docker run --rm --name db -v mysql_data:/var/lib/ai -p 3306:3306 -p 33060:33060/tcp -d -e MYSQL_ROOT_PASSWORD=password mysql
   db:
     image: mysql:latest
     container_name: db
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: password
+      # MYSQL_USER: root
+      # MYSQL_PASSWORD: password
+      MYSQL_DATABASE: ai
     ports:
-      - :3306
+      - "4179:3306"
     volumes:
-      - mysql_data:/var/lib/ai
+      - mysql_data:/var/lib/mysql
 
-#docker run -rm --name myadmin -d -p 8080:80 --link db:db phpmyadmin/phpmyadmin
   phpmyadmin:
     image: phpmyadmin/phpmyadmin:latest
     container_name: phpmyadmin
@@ -37,12 +47,19 @@ services:
     ports:
       - "8080:80"
     environment:
-      PMA_HOST: db            
+      PMA_HOST: db 
+      PMA_USER: root
+      PMA_PASSWORD: password           
     depends_on:
       - db
 
 volumes:
   mysql_data:
     driver: local
+
+networks:
+  backend-network:
+    driver: bridge
+
 
 #docker compose up -d -build
