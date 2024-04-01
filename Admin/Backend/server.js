@@ -1,13 +1,14 @@
-require('dotenv').config()
 const express = require('express');
 const mysql = require('mysql')
 const cors = require('cors')
 const multer  = require('multer');
 const path = require('path'); 
 // const { spawn } = require('child_process');
+const fs = require('fs');
 
 const app = express()
-app.use(express.json())
+// app.use(express.json())
+app.use(express.json({ limit: '500mb' }));
 app.use(cors())
 
 
@@ -45,7 +46,65 @@ const upload = multer({ storage: storage });
 //       console.log(`child process exited with code ${code}`);
 //     });
 //   });
+
+const db = mysql.createConnection({
+    host: 'localhost',
+    user: 'root',
+    password: '',
+    database: 'ai'
+});
+
+app.get('/emotionid', (req, res) => {
+    const sql = 'SELECT * FROM `emotion`';
+    db.query(sql, (err, data) => {
+        if(err) return res.json(err)
+        return res.json(data)
+    })
+})
+app.get('/textid', (req, res) => {
+    const sql = 'SELECT * FROM `text`';
+    db.query(sql, (err, data) => {
+        if(err) return res.json(err)
+        return res.json(data)
+    })
+})
+app.post('/saveKiosk', (req, res) => {
+    const { Date_time, CSGender, CSAge, CSID, EmoID, S_Pic, L_Pic } = req.body;
+    const sql = 'INSERT INTO transaction ( Date_time, CSGender, CSAge, CSID, EmoID, S_Pic, L_Pic) VALUES (?, ?, ?, ?, ?, ?, ?)';
   
+    db.query(sql, [Date_time, CSGender, CSAge, CSID, EmoID, S_Pic, L_Pic], (error, results) => {
+        if (error) {
+            console.error('Error inserting transaction:', error);
+            res.status(500).json({ message: 'Failed' });
+        } else {
+            console.log('Added successfully');
+            res.status(200).json({ message: 'Transaction successfully' });
+        }
+    });
+})
+
+app.get('/userimages', (req, res) => {
+    const imgDir = '../frontend/img_test/';
+
+    // อ่านไดเร็กทอรี
+    fs.readdir(imgDir, (err, files) => {
+        if (err) {
+            console.error('Error reading directory:', err);
+            return res.status(500).json({ error: 'Internal Server Error' });
+        }
+
+        // อ่านและแปลงเป็น base64
+        const images = [];
+        files.forEach(file => {
+            const filePath = path.join(imgDir, file);
+            const image = fs.readFileSync(filePath, { encoding: 'base64' });
+            images.push({ name: file, data: image });
+        });
+
+        res.json(images);
+    });
+});
+
 app.post('/upload', upload.single('image'), function (req, res, next) {
   const file = req.file;
 
@@ -83,14 +142,6 @@ app.post('/upload', upload.single('image'), function (req, res, next) {
 //     host = 'db';
 // }
 
-const db = mysql.createConnection({
-    host: 'db',
-    user: 'root',
-    password: 'password',
-    database: 'ai'
-});
-
-
 // const db = mysql.createConnection({
 //     host: process.env.DB_HOST,
 //     user: process.env.DB_USER,
@@ -102,7 +153,7 @@ app.get('/' , (re, res) => {
     return res.json("From Backend Side")
 })
 
-app.get('/Search', async (req, res) => {
+app.get('/Search', (req, res) => {
     // const sql = "SELECT * FROM transaction"
     // const sql = "SELECT t.Date_time, t.CSGender, t.CSAge, u.CSName AS UserName, e.EmoName AS EmotionName, t.S_Pic, t.L_Pic FROM Transaction t JOIN `CSUser` u ON t.CSID = u.CSID JOIN Emotion e ON t.EmoID = e.EmoID"
     const sql = `
@@ -131,8 +182,8 @@ app.get('/Search', async (req, res) => {
 })
 
 
-app.post('/Login', async (req, res) => {
-    const sql = "SELECT * FROM admin WHERE AdUername = ? AND AdPassword = ? "
+app.post('/Login', (req, res) => {
+    const sql = "SELECT * FROM admin WHERE AdUsername = ? AND AdPassword = ? "
     db.query(sql, [req.body.username, req.body.password], (err, data) => {
         if(err) return res.json("err");
         if(data.length > 0){
