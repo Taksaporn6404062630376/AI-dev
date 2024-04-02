@@ -174,6 +174,18 @@ app.get('/User', (req, res) => {
     })
 })
 
+app.get("/uploadtofolder", (req, res) => {
+    const sql =
+      "SELECT `CSID`, `CSName`, `Role`, `img_64` FROM `csuser`";
+    db.query(sql, (err, data) => {
+      if (err) {
+        return res.json(err);
+      } else {
+        return res.json(data);
+      }
+    });
+  });
+  
 app.post('/AddUser', (req, res) => {
     const { CSName, role, imgpath } = req.body;
     console.log(req.body)
@@ -252,17 +264,7 @@ app.post('/AddUser', (req, res) => {
 // });
 
 
-  app.get("/uploadtofolder", (req, res) => {
-    const sql =
-      "SELECT `CSID`, `CSName`, `Role`, `CSImg`, `img_64` FROM `csuser`";
-    db.query(sql, (err, data) => {
-      if (err) {
-        return res.json(err);
-      } else {
-        return res.json(data);
-      }
-    });
-  });
+
   
 app.delete('/deleteUser/:userId', (req, res) => {
     const userId = req.params.userId;

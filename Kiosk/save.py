@@ -13,8 +13,6 @@ import concurrent.futures
 from scipy.linalg import norm
 import numpy as np
 from pathlib import Path
-import shutil
-
 
 app = Flask(__name__)
 socketio = SocketIO(app)
@@ -25,42 +23,54 @@ scaling_factor = 1
 # Load Haarcascades for face detection
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
+
+# รับข้อมูล CSID จาก URL
 url = 'http://localhost:8081/User'
 response = requests.get(url)
-data = response.json()
+csids = response.json()
 
-# ตรวจสอบ CSID ที่ไม่มีใน URL และลบไฟล์รูปภาพทิ้ง
-existing_csid = set([item["CSID"] for item in data])
-image_folder = 'Userimage'
-for folder in os.listdir(image_folder):
-    if folder not in existing_csid:
-        file_path = os.path.join(image_folder, folder + '.jpg')
-        if os.path.exists(file_path):
-            os.remove(file_path)
-            print(f"Deleted image for CSID: {folder}")
+# โฟลเดอร์ที่เก็บไฟล์รูป
+user_image_folder = 'UserImage'
+
+# ลบไฟล์ที่ไม่ตรงกับ CSID จาก URL
+for root, dirs, files in os.walk(user_image_folder):
+    for file in files:
+        if file.endswith(".jpg"):
+            file_csid = file.split('.')[0]
+            if file_csid not in [csid['CSID'] for csid in csids]:
+                os.remove(os.path.join(root, file))
+
+# เก็บไฟล์ที่ตรงกับ CSID จาก URL
+for csid in csids:
+    csname_folder = os.path.join(user_image_folder, csid['CSName'])
+    os.makedirs(csname_folder, exist_ok=True)
+    
+    image_path = os.path.join(csname_folder, f"{csid['CSID']}.jpg")
+    if not os.path.exists(image_path):
+        image_url = f"http://localhost:8081/UserImage/{csid['CSName']}/{csid['CSID']}.jpg"
+        image_data = requests.get(image_url).content
+        with open(image_path, 'wb') as f:
+            f.write(image_data)
 
 # สร้างโฟลเดอร์ 'Userimage' หากยังไม่มี
 os.makedirs('Userimage', exist_ok=True)
 
-# บันทึกรูปภาพจาก URL ลงในโฟลเดอร์ตาม CSName และ CSID
-for item in data:
-    CSName = item["CSName"]
-    img_64 = item["img_64"]
-
-    CSName_path = os.path.join('Userimage', CSName)
-    if not os.path.exists(CSName_path):
-        os.makedirs(CSName_path)
-
-    CSID = item["CSID"]
-    img_filename = f"{CSID}.jpg"
-
-    with open(os.path.join(CSName_path, img_filename), "wb") as f:
-        f.write(base64.b64decode(img_64.split(",")[1]))
-
 def store_data_to_mysql(most_similar_id, emotions, age, gender, face_encoded, frame_encoded, timestamp):
     url = 'http://localhost:8081/saveKiosk'
+    print('emotion', emotions)
 
-    emoid = requests.get('http://localhost:8081/emotionid', params={'emotion': emotions}).json()[0]['EmoID']
+    emoid = None
+    response = requests.get('http://localhost:8081/emotionid').json()
+    for item in response:
+        if item['EmoName'] == emotions:
+            emoid = item['EmoID']
+            break
+
+    if emoid is not None:
+        print('emoapi', emoid)
+    else:
+        print('Emotion not found in the API')
+
 
     payload = {
         'CSGender': gender,
@@ -230,25 +240,26 @@ def create_image_folders_and_save_images():
     response = requests.get(api_endpoint)
     image_data = response.json()
 
-    # Check if image_data is a list or dict before iterating
-    if isinstance(image_data, list):
-        for entry in image_data:
-            print(entry['CSName'])
-    else:
-        print("Unexpected response format:", image_data)
-
     folder_root = "UserImage"
 
     if not os.path.exists(folder_root):
         os.makedirs(folder_root)
-        print("folder '{}' has been created".format(folder_root))
-    else:
-        print("folder '{}' already exists".format(folder_root))
-    
-    return "folder is creating"
-# Unexpected response format: {'code': 'ER_BAD_FIELD_ERROR', 'errno': 1054, 'sqlMessage': "Unknown column 'CSImg' in 'field list'", 'sqlState': '42S22', 'index': 0, 'sql': 'SELECT `CSID`, `CSName`, `Role`, `CSImg`, `img_64` FROM `csuser`'}
-# folder 'UserImage' already exists
-# 127.0.0.1 - - [02/Apr/2024 15:21:34] "GET /savetoDir HTTP/1.1" 200 -
+        print("Folder '{}' has been created".format(folder_root))
+
+    for item in image_data:
+        CSName = item["CSName"]
+        img_64 = item["img_64"]
+
+        CSName_path = os.path.join(folder_root, CSName)
+        if not os.path.exists(CSName_path):
+            os.makedirs(CSName_path)
+
+        img_filename = f"{item['CSID']}.jpg"
+
+        with open(os.path.join(CSName_path, img_filename), "wb") as f:
+            f.write(base64.b64decode(img_64.split(",")[1]))
+
+    return "Images saved successfully"
 
 @app.route('/')
 def index():
