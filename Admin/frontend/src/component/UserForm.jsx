@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react'
 import { Grid } from '@material-ui/core';
 import Controls from './controls/Controls';
 import { useForm, Form } from './UseForm';
@@ -6,20 +6,12 @@ import { styled } from '@mui/material/styles';
 import Button from '@mui/material/Button';
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
 import axios from 'axios';
-
-
-
-const VisuallyHiddenInput = styled('input')({
-  clip: 'rect(0 0 0 0)',
-  clipPath: 'inset(50%)',
-  height: 1,
-  overflow: 'hidden',
-  position: 'absolute',
-  bottom: 0,
-  left: 0,
-  whiteSpace: 'nowrap',
-  width: 1,
-});
+import ReactCrop, {
+  centerCrop,
+  makeAspectCrop,
+} from 'react-image-crop'
+import {canvasPreview} from './controls/canvasPreview'
+import 'react-image-crop/dist/ReactCrop.css'
 
 const roleItem = [
   { id: 'student', title: 'Student' },
@@ -31,8 +23,37 @@ const initialFValues = {
   role: 'student',
 };
 
+function centerAspectCrop(
+  mediaWidth,
+  mediaHeight,
+  aspect,
+) {
+  return centerCrop(
+    makeAspectCrop(
+      {
+        unit: '%',
+        width: 90,
+      },
+      aspect,
+      mediaWidth,
+      mediaHeight,
+    ),
+    mediaWidth,
+    mediaHeight,
+  )
+}
+
+
 export default function UseForm(props) {
   const [selectedImage, setSelectedImage] = useState(null);
+  const [imgSrc, setImgSrc] = useState('')
+  const previewCanvasRef = useRef(null)
+  const imgRef = useRef(null)
+  const hiddenAnchorRef = useRef(null)
+  const blobUrlRef = useRef('')
+  const [crop, setCrop] = useState()
+  const [completedCrop, setCompletedCrop] = useState()
+  const [aspect, setAspect] = useState(10 / 10)
 
   const validate = (fieldValues = values) => {
     let temp = { ...errors };
@@ -64,54 +85,90 @@ export default function UseForm(props) {
   } = useForm(initialFValues, true, validate);
 
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  function onSelectFile(e) {
+    if (e.target.files && e.target.files.length > 0) {
+      setCrop(undefined)
+      const reader = new FileReader()
+      reader.addEventListener('load', () =>
+        setImgSrc(reader.result ? reader.result.toString() : ''),
+      )
+      reader.readAsDataURL(e.target.files[0])
+    }
+  }
 
+  function onImageLoad(e) {
+    if (aspect) {
+      const { width, height } = e.currentTarget
+      setCrop(centerAspectCrop(width, height, aspect))
+    }
+  }
+
+  async function handleSubmit (e) {
+    e.preventDefault();
+    
     try {
-      const imagePath = await saveImageToDirectory(selectedImage);
-      console.log('PAth 1: ',imagePath)
+      const image = imgRef.current;
+      const previewCanvas = previewCanvasRef.current;
+      if (!image || !previewCanvas || !completedCrop) {
+        throw new Error('Crop canvas does not exist');
+      }
+  
+      const scaleX = image.naturalWidth / image.width;
+      const scaleY = image.naturalHeight / image.height;
+  
+      const canvas = document.createElement('canvas');
+      canvas.width = completedCrop.width * scaleX;
+      canvas.height = completedCrop.height * scaleY;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        throw new Error('No 2d context');
+      }
+  
+      ctx.drawImage(
+        image,
+        completedCrop.x * scaleX,
+        completedCrop.y * scaleY,
+        completedCrop.width * scaleX,
+        completedCrop.height * scaleY,
+        0,
+        0,
+        completedCrop.width * scaleX,
+        completedCrop.height * scaleY
+      );
+  
+      const base64Image = canvas.toDataURL('image/jpeg');
+  
       await axios.post('http://localhost:8081/AddUser', {
         CSName: values.fullName,
         role: values.role,
-        imgpath: imagePath,
+        imgpath: base64Image,
       });
-
-      
+  
       window.location.reload();
-
+  
       resetForm();
       clearFile();
     } catch (error) {
       console.error('Error creating:', error);
     }
-  };
-
-
+  }
   
-  const saveImageToDirectory = async (file) => {
-    try {
-      const formData = new FormData();
-      formData.append('image', file);
+  
 
-      const response = await axios.post('http://localhost:8081/upload', formData);
-      console.log('PAth jaaa22: ',response.data)
-      return response.data;
-
-    } catch (error) {
-      console.error('Error uploading image:', error);
-      throw error;
+  useEffect(() => {
+    if (
+      completedCrop?.width &&
+      completedCrop?.height &&
+      imgRef.current &&
+      previewCanvasRef.current
+    ) {
+      canvasPreview(
+        imgRef.current,
+        previewCanvasRef.current,
+        completedCrop,
+      )
     }
-  };
-
-  const handleImageChange = (event) => {
-    const file = event.target.files[0];
-
-
-    if (file) {
-      // Update the state to store the image file
-      setSelectedImage(file);
-    }
-  };
+  }, [completedCrop])
 
   return (
     <Form onSubmit={handleSubmit}>
@@ -131,22 +188,28 @@ export default function UseForm(props) {
             onChange={handleInputChange}
             items={roleItem}
           />
-          <Button
-            component="label"
-            role={undefined}
-            variant="contained"
-            tabIndex={-1}
-            startIcon={<AddPhotoAlternateIcon />}
-          >
-            Upload image
-            <VisuallyHiddenInput
-              type="file"
-              accept="image/*"
-              onChange={handleImageChange}
-            />
-          </Button>
+    <div className="Crop-Controls">
+        <input type="file" accept="image/*" onChange={onSelectFile} />
+
+      </div>
         </Grid>
-        <Grid item xs={6}>
+        <Grid item xs={3}>
+        {!!imgSrc && (
+        <ReactCrop
+          crop={crop}
+          onChange={(_, percentCrop) => setCrop(percentCrop)}
+          onComplete={(c) => setCompletedCrop(c)}
+          aspect={aspect}
+        >
+          <img
+            ref={imgRef}
+            alt="Crop me"
+            src={imgSrc}
+            onLoad={onImageLoad}
+            style={{height: '200px'}}
+          />
+        </ReactCrop>
+      )}
           {selectedImage && (
             <div>
               <img
@@ -156,8 +219,25 @@ export default function UseForm(props) {
               />
             </div>
           )}
-
-          <div style={{ position: 'absolute', bottom: 20, right: 15 }}>
+          </Grid>
+        <Grid item xs={3}>
+        {!!completedCrop && (
+        <>
+          <div>
+            <p>Cropped Preview</p>
+            <canvas
+              ref={previewCanvasRef}
+              style={{
+                border: '1px solid black',
+                objectFit: 'contain',
+                width: '100px',
+                height: '100px',
+              }}
+            />
+          </div>
+        </>
+      )}
+       <div style={{ position: 'absolute', bottom: 20, right: 15 }}>
             <Button type="submit" variant="contained" color="primary">
               Submit
             </Button>

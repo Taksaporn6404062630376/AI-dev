@@ -6,6 +6,7 @@ import Schedule from "./pages/Schedule";
 import Search from "./pages/Search";
 // import AddUser from "./pages/AddUser"
 import User from "./pages/User"
+import Page from "./pages/Page"
 
 
 const App = () => {
@@ -17,6 +18,7 @@ const App = () => {
         <Route path="/User" element={<User/>} />
         <Route path="/Schedule" element={<Schedule/>} />
         <Route path="/Search" element={<Search/>} />
+        <Route path="/Page" element={<Page/>} />
 
 
       </Routes>

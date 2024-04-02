@@ -161,11 +161,16 @@ export default function Users() {
                     alt="User Image"
                     style={{ width: '50px', height: '50px', borderRadius: '50%' }}
                   /> */}
-                  <img
+                    <img
+                    src={item.img_64}
+                    alt="User Image"
+                    style={{ width: '50px', height: '50px'}}
+                  />
+                  {/* <img
                     src={`./../../../img_test/${item.CSID}.jpg`}
                     alt="User Image"
                     style={{ width: '50px', height: '50px', borderRadius: '50%' }}
-                  />
+                  /> */}
                 </TableCell>
                 <TableCell><Button
                                 variant="outlined"

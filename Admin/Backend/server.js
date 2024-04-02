@@ -20,32 +20,6 @@ const upload = multer({ storage: storage });
 //     storage: storage
 //   }).single('image');
 
-// app.post('/searchimage', image, (req, res) => {
-//     if (!req.file) {
-//       return res.status(400).send('No files were uploaded.');
-//     }
-  
-//     // Path to the Python script
-//     const pythonScriptPath = 'search.py';
-  
-//     // Spawn a new process running the Python script
-//     const pythonProcess = spawn('python', [pythonScriptPath, req.file.path]);
-  
-//     // Handle Python script output
-//     pythonProcess.stdout.on('data', (data) => {
-//       console.log(`stdout: ${data}`);
-//       res.send(data); // Send Python script output back to the client
-//     });
-  
-//     pythonProcess.stderr.on('data', (data) => {
-//       console.error(`stderr: ${data}`);
-//       res.status(500).send('Internal Server Error');
-//     });
-  
-//     pythonProcess.on('close', (code) => {
-//       console.log(`child process exited with code ${code}`);
-//     });
-//   });
 
 const db = mysql.createConnection({
     host: 'localhost',
@@ -83,59 +57,56 @@ app.post('/saveKiosk', (req, res) => {
     });
 })
 
-app.get('/userimages', (req, res) => {
-    const imgDir = '../frontend/img_test/';
+// app.get('/userimages', (req, res) => {
+//     const imgDir = '../frontend/img_test/';
+//     fs.readdir(imgDir, (err, files) => {
+//         if (err) {
+//             console.error('Error reading directory:', err);
+//             return res.status(500).json({ error: 'Internal Server Error' });
+//         }
+//         const images = [];
+//         files.forEach(file => {
+//             const filePath = path.join(imgDir, file);
+//             const image = fs.readFileSync(filePath, { encoding: 'base64' });
+//             images.push({ name: file, data: image });
+//         });
+//         res.json(images);
+//     });
+// });
 
-    // อ่านไดเร็กทอรี
-    fs.readdir(imgDir, (err, files) => {
-        if (err) {
-            console.error('Error reading directory:', err);
-            return res.status(500).json({ error: 'Internal Server Error' });
-        }
-
-        // อ่านและแปลงเป็น base64
-        const images = [];
-        files.forEach(file => {
-            const filePath = path.join(imgDir, file);
-            const image = fs.readFileSync(filePath, { encoding: 'base64' });
-            images.push({ name: file, data: image });
-        });
-
-        res.json(images);
-    });
-});
-
-app.post('/upload', upload.single('image'), function (req, res, next) {
-  const file = req.file;
+// app.post('/upload', upload.single('image'), function (req, res, next) {
+//   const file = req.file;
 
   
-  const nextCSIDQuery = 'SELECT CSID + 1 AS NextCSID FROM CSUser ORDER BY CSID DESC LIMIT 1';
+//   const nextCSIDQuery = 'SELECT CSID + 1 AS NextCSID FROM CSUser ORDER BY CSID DESC LIMIT 1';
 
-  db.query(nextCSIDQuery, (err, results) => {
-    if (err) {
-      console.error('Error getting the next CSID:', err);
-      res.status(500).json({ error: 'Error getting the next CSID from the database' });
-    } else {
+//   db.query(nextCSIDQuery, (err, results) => {
+//     if (err) {
+//       console.error('Error getting the next CSID:', err);
+//       res.status(500).json({ error: 'Error getting the next CSID from the database' });
+//     } else {
       
-      const nextCSID = results[0] ? results[0].NextCSID : 1;
-      console.log('Query results:', results);
-    //   const nextCSID = results[0].NextCSID ;
+//       const nextCSID = results[0] ? results[0].NextCSID : 1;
+//       console.log('Query results:', results);
+//     //   const nextCSID = results[0].NextCSID ;
+  
+  
     
+//   const nextCSIDQuery = 'SELECT CSID + 1 AS NextCSID FROM CSUser ORDER BY CSID DESC LIMIT 1';
+//       const filename = nextCSID + path.extname(file.originalname);
 
-      const filename = nextCSID + path.extname(file.originalname);
-
-      // Save 
-      const destination = path.join('../frontend/img_test/', filename);
-      require('fs').writeFileSync(destination, file.buffer);
+//       // Save 
+//       const destination = path.join('../frontend/img_test/', filename);
+//       require('fs').writeFileSync(destination, file.buffer);
     
-      console.log(destination)
-      console.log('File saved successfully:', filename);
-      res.send(destination);
+//       console.log(destination)
+//       console.log('File saved successfully:', filename);
+//       res.send(destination);
 
       
-    }
-  });
-})
+//     }
+//   });
+// })
 
 // var host = 'localhost';
 // if (process.env.NODE_ENV == 'production') {
@@ -201,6 +172,35 @@ app.get('/User', (req, res) => {
         return res.json(data)
     })
 })
+
+app.post('/AddUser', (req, res) => {
+    const { CSName, role, imgpath } = req.body;
+    console.log(req.body)
+    const sql = 'INSERT INTO CSUser (CSName, Role, img_64) VALUES (?, ?, ?)';
+  
+    db.query(sql, [CSName, role, imgpath], (error, results) => {
+      if (error) {
+        console.error('Error inserting user:',error);
+        res.status(500).json({ message: 'Failed to add user' });
+      } else {
+        console.log('User added successfully');
+        res.status(200).json({ message: 'User added successfully' });
+      }
+    });
+  });
+
+  app.get("/uploadtofolder", (req, res) => {
+    const sql =
+      "SELECT `CSID`, `CSName`, `Role`, `CSImg`, `img_64` FROM `csuser`";
+    db.query(sql, (err, data) => {
+      if (err) {
+        return res.json(err);
+      } else {
+        return res.json(data);
+      }
+    });
+  });
+  
 app.delete('/deleteUser/:userId', (req, res) => {
     const userId = req.params.userId;
 
@@ -216,21 +216,7 @@ app.delete('/deleteUser/:userId', (req, res) => {
     });
 });
 
-app.post('/AddUser', (req, res) => {
-    const { CSName, role, imgpath } = req.body;
-    console.log(req.body)
-    const sql = 'INSERT INTO CSUser (CSName, Role, CSImg) VALUES (?, ?, ?)';
-  
-    db.query(sql, [CSName, role, imgpath], (error, results) => {
-      if (error) {
-        console.error('Error inserting user:',error);
-        res.status(500).json({ message: 'Failed to add user' });
-      } else {
-        console.log('User added successfully');
-        res.status(200).json({ message: 'User added successfully' });
-      }
-    });
-  });
+
   
 
   app.get('/dashboard', (req, res) => {

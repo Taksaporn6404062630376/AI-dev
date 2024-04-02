@@ -1,5 +1,5 @@
 import cv2
-from flask import Flask, render_template, Response
+from flask import Flask, render_template, Response, jsonify
 from flask_socketio import SocketIO
 from datetime import datetime
 import base64
@@ -12,6 +12,7 @@ import requests
 import concurrent.futures
 from scipy.linalg import norm
 import numpy as np
+from pathlib import Path
 
 
 app = Flask(__name__)
@@ -23,24 +24,24 @@ scaling_factor = 1
 # Load Haarcascades for face detection
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
+def create_image_folders_and_save_images():
+    api_endpoint = 'http://localhost:8081/uploadtofolder'
 
-url = 'http://localhost:8081/userimages'
-response = requests.get(url)
-data = response.json()
+    response = requests.get(api_endpoint)
+    image_data = response.json()
 
-os.makedirs('csuserimage', exist_ok=True)
+    for entry in image_data:
+        print(entry['CSName'])
 
-for item in data:
-    img_name = item['name']
-    img_data = item['data']
-    img_path = os.path.join('csuserimage', img_name)
+    folder_root = "UserImage"
 
-    with open(img_path, 'wb') as img_file:
-        img_file.write(base64.b64decode(img_data))
-
-    print(f"Saved image: {img_name}")
-
-print("Images saved successfully.")
+    if not os.path.exists(folder_root):
+        os.makedirs(folder_root)
+        print("folder '{}' has been created".format(folder_root))
+    else:
+        print("folder '{}' already exist".format(folder_root))
+    
+    return "folder is creating"
 
 def store_data_to_mysql(most_similar_id, emotions, age, gender, face_encoded, frame_encoded, timestamp):
     url = 'http://localhost:8081/saveKiosk'
@@ -136,7 +137,7 @@ def camera_stream():
             is_existing_face = False
             for trac in tracker:
                 cosine = np.dot(embedding, trac['pic']) / (norm(embedding) * norm(trac['pic']))
-                if cosine > 0.4:
+                if cosine > 0.6:
                     # print('most similar face')
                     trac['time'] = Time
                     is_existing_face = True
@@ -152,9 +153,9 @@ def camera_stream():
                 cv2.imwrite('frame.jpg', frame)
                 tracker.append({'pic': embedding, 'time': Time})
                 # detect face from user name
-                dbpath = os.path.join(os.path.dirname(os.path.abspath(__file__)), "csuserimage")
-                dbpath_str = str(dbpath)
-                results = DeepFace.find(img_path='face.jpg', db_path=dbpath_str, model_name='VGG-Face', enforce_detection=False)
+                current_directory = Path(__file__).parent
+                db_path = current_directory / 'UserImage'
+                results = DeepFace.find(img_path='face.jpg', db_path=db_path, model_name='VGG-Face', enforce_detection=False)
 
                 most_similar_id = 0
                 if results and not results[0].empty:

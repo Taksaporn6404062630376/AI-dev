@@ -11,6 +11,8 @@ import time
 import pyttsx3
 import random
 from pathlib import Path
+import requests
+
 
 app = Flask(__name__)
 socketio = SocketIO(app)
@@ -40,7 +42,6 @@ def store_data_to_mysql(most_similar_id, emotions, age, gender, face_encoded, fr
         connection = mysql.connector.connect(**db_config)
         cursor = connection.cursor()
 
-        # Check if most_similar_id has been recorded within the last hour
         current_time = time.time()
         if most_similar_id in namein1hour and current_time - last_recorded_timestamp.get(most_similar_id, 0) < 3600:
             print("Skipping duplicate entry for", most_similar_id)
@@ -50,7 +51,6 @@ def store_data_to_mysql(most_similar_id, emotions, age, gender, face_encoded, fr
         last_recorded_timestamp[most_similar_id] = current_time
 
 
-        # Get EmoID from emotion table
         cursor.execute("SELECT EmoID FROM emotion WHERE EmoName = %s", (emotions,))
         emoid = cursor.fetchone()[0]
 
@@ -84,27 +84,18 @@ def speak_message(message):
     engine.runAndWait()
 
 def get_message_based_on_emotion(emotion_text):
-    # Connect to the database using MySQL
-    conn = mysql.connector.connect(host=db_config['host'], user=db_config['user'], passwd=db_config['password'], db=db_config['database'])
-    c = conn.cursor()
+    emoid = requests.get('http://localhost:8081/emotionid', params={'emotion': emotion_text}).json()[0]['EmoID']
 
-    # Get emoID from emotion table
-    c.execute("SELECT EmoID FROM emotion WHERE EmoName = %s", (emotion_text,))
-    emoID = c.fetchone()[0]
-
-    # Get enmessage from text table where emoID matches
-    c.execute("SELECT  message FROM text WHERE EmoID = %s", (emoID,))
-    messages = c.fetchall()
-    conn.close()
+    messages = requests.get('http://localhost:8081/textid', params={'EmoID': emoid}).json()
 
     # If there are messages for the predicted emotion, return a random message
     if messages:
-        return random.choice(messages)[0]
+        return random.choice(messages)['Message']
     else:
         return None
     
 def analyze_face(face):
-        # Analyze emotions, age, and gender
+    # Analyze emotions, age, and gender
     emotions = DeepFace.analyze(face, actions=['emotion', 'age', 'gender'], enforce_detection=False)
     emotion_text = emotions[0]['dominant_emotion']
     age_text = emotions[0]['age']
@@ -121,7 +112,7 @@ def camera_stream():
     while True:
         ret, frame = cap.read()
         frame = cv2.resize(frame, None, fx=scaling_factor, fy=scaling_factor, interpolation=cv2.INTER_AREA)
-
+        # frame = cv2.flip(frame, 1)
         # Add timestamp
         timestamp = datetime.now().strftime("%Y-%m-%d   %H:%M:%S")
         cv2.putText(frame, f'Time: {timestamp}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
@@ -192,19 +183,22 @@ def gen_frames():
         ret, frame = cap.read()
         frame = cv2.resize(frame, None, fx=scaling_factor, fy=scaling_factor, interpolation=cv2.INTER_AREA)
 
-        # Add timestamp
-        timestamp = datetime.now().strftime("%Y-%m-%d   %H:%M:%S")
-        cv2.putText(frame, f'Time: {timestamp}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
-
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=3, flags=cv2.CASCADE_SCALE_IMAGE)
 
         for (x, y, w, h) in faces:
             frame[y:y+h, x:x+w]
             cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 255, 255), 1)
-        _  , encoded_frame = cv2.imencode('.jpg', frame)
+
+        
+        # Add timestamp
+        timestamp = datetime.now().strftime("%Y-%m-%d   %H:%M:%S")
+        cv2.putText(frame, f'Time: {timestamp}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+        
+        _, encoded_frame = cv2.imencode('.jpg', frame)
         yield (b'--frame\r\n'
                 b'Content-Type: image/jpeg\r\n\r\n' + encoded_frame.tobytes() + b'\r\n\r\n')
+
 
 
 @app.route('/')
