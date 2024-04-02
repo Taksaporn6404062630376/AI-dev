@@ -13,6 +13,7 @@
             align-items: center;
             justify-content: flex-start;
             overflow: hidden;
+            background-color: #470a68;
         }
 
         #video-container {
@@ -30,6 +31,7 @@
         .stack-cards {
             list-style-type: none;
             padding: 0;
+            margin: 0.7rem
         }
 
 
@@ -41,7 +43,7 @@
 
         .stack-cards__item {
             width: 500px;
-            margin-bottom: 10px;
+            margin-bottom: 0.7rem;
             border: 1px solid #ddd;
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
@@ -53,13 +55,14 @@
 
         .center {
             margin: 0;
-            font-size: 18px;
+            font-size: 20px;
+            font-family: "Lucida Console", "Courier New", monospace;
         }
         
         .right {
             flex-shrink: 0;
             text-align: right;
-            font-size: 60px;
+            font-size: 70px;
             margin: 0;
         }
         
@@ -102,23 +105,40 @@
         
             // Set the HTML content of the new card
             newCard.innerHTML = `
-                
-                <img src="${faceImage}" alt="Face Image" style=" max-width: 80px; max-height: 80px;border-radius: 3px;">
-                
+                <img src="${faceImage}" alt="Face Image" style=" max-width: 100px; max-height: 100px; border-radius: 3px;">
                 <p class="center">
                     ${timestamp}<br>
                     ${name}<br>
                     Age: ${ageRange}
-                    Gender: ${gender}
+                    Gender: ${gender}<br>
                 </p>
-                <p class="right">
+                <span class="right">
                     ${getEmotionEmoji(emotion)}
-                </p>
+                </span>
             `;
         
             // Insert the new card item at the top of the stack
             var stackCards = document.getElementById('stackCards');
             stackCards.insertBefore(newCard, stackCards.firstChild);
+
+            function getEmotionEmoji(emotion) {
+                switch (emotion) {
+                    case 'happy':
+                        return '😊';
+                    case 'sad':
+                        return '😢';
+                    case 'angry':
+                        return '😠';
+                    case 'surprise':
+                        return '😮';
+                    case 'neutral':
+                        return '😐';
+                    case 'fear':
+                        return '😱';
+                    default:
+                        return emotion;
+                }
+            }
         });
         
 

@@ -48,8 +48,6 @@ export default function UseForm(props) {
   const [imgSrc, setImgSrc] = useState('')
   const previewCanvasRef = useRef(null)
   const imgRef = useRef(null)
-  const hiddenAnchorRef = useRef(null)
-  const blobUrlRef = useRef('')
   const [crop, setCrop] = useState()
   const [completedCrop, setCompletedCrop] = useState()
   const [aspect, setAspect] = useState(10 / 10)

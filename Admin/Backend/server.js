@@ -4,7 +4,8 @@ const cors = require('cors')
 const multer  = require('multer');
 const path = require('path'); 
 // const { spawn } = require('child_process');
-const fs = require('fs');
+const axios = require("axios");
+const { error } = require("console");
 
 const app = express()
 // app.use(express.json())
@@ -179,15 +180,77 @@ app.post('/AddUser', (req, res) => {
     const sql = 'INSERT INTO CSUser (CSName, Role, img_64) VALUES (?, ?, ?)';
   
     db.query(sql, [CSName, role, imgpath], (error, results) => {
-      if (error) {
-        console.error('Error inserting user:',error);
-        res.status(500).json({ message: 'Failed to add user' });
-      } else {
-        console.log('User added successfully');
-        res.status(200).json({ message: 'User added successfully' });
-      }
+        if (error) {
+          console.error("Error inserting user:", error);
+          res.status(500).json({ message: "Failed to add user" });
+        } else {
+          console.log("User added successfully");
+          res.status(200).json({ message: "User added successfully" });
+    
+          axios
+            .get("http://127.0.0.1:5000/savetoDir")
+            .then(() => {
+              console.log("Python API called successfully");
+            })
+            .catch((error) => {
+              console.error("Error calling Python API:", error);
+            });
+        }
     });
   });
+
+//   app.post("/AddUser", (req, res) => {
+//     const { CSName, role, img_64 } = req.body;
+//     // console.log(req.body);
+//     const sql = "INSERT INTO CSUser (CSName, Role, img_64) VALUES (?, ?, ?)";
+  
+//     db.query(sql, [CSName, role, img_64], (error, results) => {
+//       if (error) {
+//         console.error("Error inserting user:", error);
+//         res.status(500).json({ message: "Failed to add user" });
+//       } else {
+//         console.log("User added successfully");
+//         res.status(200).json({ message: "User added successfully" });
+  
+//         axios
+//           .get("http://127.0.0.1:5000/savetoDir")
+//           .then(() => {
+//             console.log("Python API called successfully");
+//           })
+//           .catch((error) => {
+//             console.error("Error calling Python API:", error);
+//           });
+//       }
+//     });
+//   });
+
+//   app.post("/AddUser", (req, res) => {
+//     const { CSName, role, img_64 } = req.body;
+//     const sql = "INSERT INTO CSUser (CSName, Role, img_64) VALUES (?, ?, ?)";
+
+//     db.query(sql, [CSName, role, img_64], (error, results) => {
+//         if (error) {
+//             console.error("Error inserting user:", error);
+//             res.status(500).json({ message: "Failed to add user" });
+//         } else {
+//             console.log("User added successfully");
+//             res.status(200).json({ message: "User added successfully" });
+
+//             axios
+//                 .post("http://127.0.0.1:5000/uploadtofolder", {
+//                     CSName: CSName,
+//                     img_64: img_64
+//                 })
+//                 .then(() => {
+//                     console.log("Python API called successfully");
+//                 })
+//                 .catch((error) => {
+//                     console.error("Error calling Python API:", error);
+//                 });
+//         }
+//     });
+// });
+
 
   app.get("/uploadtofolder", (req, res) => {
     const sql =
