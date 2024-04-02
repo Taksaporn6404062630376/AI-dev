@@ -43,7 +43,6 @@ function centerAspectCrop(
   )
 }
 
-
 export default function UseForm(props) {
   const [selectedImage, setSelectedImage] = useState(null);
   const [imgSrc, setImgSrc] = useState('')

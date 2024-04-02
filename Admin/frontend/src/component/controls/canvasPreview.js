@@ -48,6 +48,5 @@ export async function canvasPreview(
     image.naturalWidth,
     image.naturalHeight,
   )
-
   ctx.restore()
 }
