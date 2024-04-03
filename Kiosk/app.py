@@ -13,6 +13,7 @@ import concurrent.futures
 from scipy.linalg import norm
 import numpy as np
 from pathlib import Path
+import time
 
 app = Flask(__name__)
 socketio = SocketIO(app)
@@ -121,9 +122,11 @@ def camera_stream():
                     # ใบหน้าที่มีความคล้ายสูงสุด
                     track['time'] = current_time
                     is_existing_face = True
+                    print('similar')
                     break
                 elif track['time'] != current_time:
                     # ใบหน้าที่มีความคล้ายน้อย
+                    print('not similar')
                     tracked_faces.append({'embedding': embedding, 'time': current_time})
                     break
 
@@ -169,19 +172,40 @@ def camera_stream():
             cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 255, 255), 1)
 
 # ทำนาย อารมณ์ อายุ เพศ
+def analyze_emotion(face, start_time):
+    result = DeepFace.analyze(face, actions=['emotion'], enforce_detection=False)[0]['dominant_emotion']
+    end_time = time.time()
+    print(f"Emotion analysis took {start_time:.2f}-{end_time} seconds")
+    return result
+
+def analyze_age(face, start_time):
+    result = DeepFace.analyze(face, actions=['age'], enforce_detection=False)[0]['age']
+    end_time = time.time()
+    print(f"Age analysis took {start_time:.2f}-{end_time} seconds")
+    return result
+
+def analyze_gender(face, start_time):
+    result = DeepFace.analyze(face, actions=['gender'], enforce_detection=False)[0]['dominant_gender']
+    end_time = time.time()
+    print(f"Gender analysis took {start_time:.2f}-{end_time} seconds")
+    return result
+
 def analyze_face(face):
     with concurrent.futures.ThreadPoolExecutor() as executor:
-        emotion_future = executor.submit(DeepFace.analyze, face, actions=['emotion'], enforce_detection=False)
-        age_future = executor.submit(DeepFace.analyze, face, actions=['age'], enforce_detection=False)
-        gender_future = executor.submit(DeepFace.analyze, face, actions=['gender'], enforce_detection=False)
+        start_time = time.time()
+        emotion_future = executor.submit(analyze_emotion, face, start_time)
+        start_time = time.time()
+        age_future = executor.submit(analyze_age, face, start_time)
+        start_time = time.time()
+        gender_future = executor.submit(analyze_gender, face, start_time)
   
         concurrent.futures.wait([emotion_future, age_future, gender_future])
 
-        emotion_result = emotion_future.result()[0]['dominant_emotion']
-        age_result = age_future.result()[0]['age']
-        gender_result = gender_future.result()[0]['dominant_gender']
-        
-    return emotion_result, age_result, gender_result
+        emotion_result = emotion_future.result()
+        age_result = age_future.result()
+        gender_result = gender_future.result()
+
+        return emotion_result, age_result, gender_result
 
 # สุ่มข้อความสำหรับพูดส่งเสียง
 TH_voice_id = "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens\TTS_THAI"
