@@ -20,6 +20,18 @@ function pages () {
     item.CSName.toLowerCase().includes(searchterm.toLowerCase())
   )
 
+  const handleDelete = async (userId) => {
+    try {
+        await axios.delete(`http://localhost:8081/deleteUser/${userId}`);
+        const response = await fetch('http://localhost:8081/User');
+        const newData = await response.json();
+
+        const usersWithIds = newData.map((user, index) => ({ ...user, id: index + 1 }));
+        setUser(usersWithIds);
+    } catch (error) {
+        console.error('Error deleting user:', error);
+    }
+}
 
 return(
   <div className="flex gap-6">
@@ -55,7 +67,7 @@ return(
             alt="image"
             style={{width:"50px", height:'50px'}}
             ></img></td>
-            <td><button>Delete</button></td>
+            <td><button onClick={handleDelete}>Delete</button></td>
           </tr>
         ))}
 

@@ -35,8 +35,11 @@ csids = response.json()
 for root, dirs, files in os.walk('UserImage'):
     for file in files:
         if file.endswith(".jpg"):
-            file_csid = file.split('.')[0]
-            if file_csid not in [csid['CSID'] for csid in csids]:
+            file_csid = int(file.split('.')[0])
+            print("file_csid:", file_csid)
+            csid_values = [int(csid['CSID']) for csid in csids]
+            print("csid_values:", csid_values)
+            if file_csid not in csid_values:
                 os.remove(os.path.join(root, file))
 
 # เก็บไฟล์ที่ตรงกับ CSID จาก URL
@@ -73,8 +76,8 @@ def gen_frames():
                 b'Content-Type: image/jpeg\r\n\r\n' + encoded_frame.tobytes() + b'\r\n\r\n')
         
 # ตีกรอบให้ใบหน้า เพื่อเอารูปไปทำนาย
-tracker = []
-Time = 0
+tracked_faces = []
+current_time = 0
 def camera_stream():
     while True:
         ret, frame = cap.read()
@@ -112,23 +115,23 @@ def camera_stream():
 
             # เปรียบเทียบกับ embedding ที่มีอยู่ใน tracker
             is_existing_face = False
-            for trac in tracker:
-                cosine = np.dot(embedding, trac['pic']) / (norm(embedding) * norm(trac['pic']))
+            for track in tracked_faces:
+                cosine = np.dot(embedding, track['embedding']) / (norm(embedding) * norm(track['embedding']))
                 if cosine > 0.6:
                     # ใบหน้าที่มีความคล้ายสูงสุด
-                    trac['time'] = Time
+                    track['time'] = current_time
                     is_existing_face = True
                     break
-                elif trac['time'] != Time:
+                elif track['time'] != current_time:
                     # ใบหน้าที่มีความคล้ายน้อย
-                    tracker.append({'pic': embedding, 'time': Time})
+                    tracked_faces.append({'embedding': embedding, 'time': current_time})
                     break
 
             if not is_existing_face:
                 # ใบหน้าที่ไม่เคยเห็น
                 cv2.imwrite('face.jpg', face)
                 cv2.imwrite('frame.jpg', frame)
-                tracker.append({'pic': embedding, 'time': Time})
+                tracked_faces.append({'embedding': embedding, 'time': current_time})
                 
                 # ค้นหาใบหน้าที่คล้ายคลึงในระบบ
                 current_directory = Path(__file__).parent
@@ -150,9 +153,10 @@ def camera_stream():
                             most_similar_name = user["CSName"]
                             break
 
-
                 emotions, age, gender = analyze_face(face)
+                print(emotions)
                 message = get_message_based_on_emotion(emotions)
+                print(message)
                 if message:
                     speak_message(message)
 
@@ -189,13 +193,29 @@ def speak_message(message):
     engine.say(message)
     engine.runAndWait()
 
-def get_message_based_on_emotion(emotion_text):
-    emoid = requests.get('http://localhost:8081/emotionid', params={'emotion': emotion_text}).json()[0]['EmoID']
-
-    messages = requests.get('http://localhost:8081/textid', params={'EmoID': emoid}).json()
-    if messages:
-        return random.choice(messages)['Message']
+def get_message_based_on_emotion(emotions):
+    emoid = None
+    response = requests.get('http://localhost:8081/emotionid').json()
+    for item in response:
+        if item['EmoName'] == emotions:
+            emoid = item['EmoID']
+            print(emoid)
+            break
+    
+    if emoid:
+        messages_response = requests.get('http://localhost:8081/textid', params={'EmoID': emoid}).json()
+        if messages_response:
+            filtered_messages = [msg for msg in messages_response if msg['EmoID'] == emoid]
+            if filtered_messages:
+                return random.choice(filtered_messages)['Message']
+            else:
+                print("No messages found for EmoID:", emoid)
+                return None
+        else:
+            print("No messages found for EmoID:", emoid)
+            return None
     else:
+        print("No EmoID found for emotion:", emotions)
         return None
     
 # บันทึกข้อมูล transaction ลงฐานข้อมูล
