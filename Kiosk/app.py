@@ -13,7 +13,7 @@ import concurrent.futures
 from scipy.linalg import norm
 import numpy as np
 from pathlib import Path
-import time
+import glob
 
 app = Flask(__name__)
 socketio = SocketIO(app)
@@ -33,27 +33,27 @@ response = requests.get(url)
 csids = response.json()
 
 # ลบไฟล์ที่ไม่ตรงกับ CSID จาก URL
-for root, dirs, files in os.walk('UserImage'):
-    for file in files:
-        if file.endswith(".jpg"):
-            file_csid = int(file.split('.')[0])
-            print("file_csid:", file_csid)
-            csid_values = [int(csid['CSID']) for csid in csids]
-            print("csid_values:", csid_values)
-            if file_csid not in csid_values:
-                os.remove(os.path.join(root, file))
+# for root, dirs, files in os.walk('UserImage'):
+#     for file in files:
+#         if file.endswith(".jpg"):
+#             file_csid = int(file.split('.')[0])
+#             print("file_csid:", file_csid)
+#             csid_values = [int(csid['CSID']) for csid in csids]
+#             print("csid_values:", csid_values)
+#             if file_csid not in csid_values:
+#                 os.remove(os.path.join(root, file))
 
-# เก็บไฟล์ที่ตรงกับ CSID จาก URL
-for csid in csids:
-    csname_folder = os.path.join('UserImage', csid['CSName'])
-    os.makedirs(csname_folder, exist_ok=True)
+# # เก็บไฟล์ที่ตรงกับ CSID จาก URL
+# for csid in csids:
+#     csname_folder = os.path.join('UserImage', csid['CSName'])
+#     os.makedirs(csname_folder, exist_ok=True)
     
-    image_path = os.path.join(csname_folder, f"{csid['CSID']}.jpg")
-    if not os.path.exists(image_path):
-        image_url = f"http://localhost:8081/UserImage/{csid['CSName']}/{csid['CSID']}.jpg"
-        image_data = requests.get(image_url).content
-        with open(image_path, 'wb') as f:
-            f.write(image_data)
+#     image_path = os.path.join(csname_folder, f"{csid['CSID']}.jpg")
+#     if not os.path.exists(image_path):
+#         image_url = f"http://localhost:8081/UserImage/{csid['CSName']}/{csid['CSID']}.jpg"
+#         image_data = requests.get(image_url).content
+#         with open(image_path, 'wb') as f:
+#             f.write(image_data)
 
 # สร้าง Stream video ที่แสดงบนตู้
 def gen_frames():
@@ -99,6 +99,8 @@ def camera_stream():
                 else:
                     scale_factor = max_size / width
                 face_resized = cv2.resize(face, (int(width * scale_factor), int(height * scale_factor)))
+                # solve to payload too large
+                # frame_resize = cv2.resize(frame, (int(width * scale_factor), int(height * scale_factor))) 
             else:
                 face_resized = face
 
@@ -122,11 +124,9 @@ def camera_stream():
                     # ใบหน้าที่มีความคล้ายสูงสุด
                     track['time'] = current_time
                     is_existing_face = True
-                    print('similar')
                     break
                 elif track['time'] != current_time:
                     # ใบหน้าที่มีความคล้ายน้อย
-                    print('not similar')
                     tracked_faces.append({'embedding': embedding, 'time': current_time})
                     break
 
@@ -172,40 +172,19 @@ def camera_stream():
             cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 255, 255), 1)
 
 # ทำนาย อารมณ์ อายุ เพศ
-def analyze_emotion(face, start_time):
-    result = DeepFace.analyze(face, actions=['emotion'], enforce_detection=False)[0]['dominant_emotion']
-    end_time = time.time()
-    print(f"Emotion analysis took {start_time:.2f}-{end_time} seconds")
-    return result
-
-def analyze_age(face, start_time):
-    result = DeepFace.analyze(face, actions=['age'], enforce_detection=False)[0]['age']
-    end_time = time.time()
-    print(f"Age analysis took {start_time:.2f}-{end_time} seconds")
-    return result
-
-def analyze_gender(face, start_time):
-    result = DeepFace.analyze(face, actions=['gender'], enforce_detection=False)[0]['dominant_gender']
-    end_time = time.time()
-    print(f"Gender analysis took {start_time:.2f}-{end_time} seconds")
-    return result
-
 def analyze_face(face):
     with concurrent.futures.ThreadPoolExecutor() as executor:
-        start_time = time.time()
-        emotion_future = executor.submit(analyze_emotion, face, start_time)
-        start_time = time.time()
-        age_future = executor.submit(analyze_age, face, start_time)
-        start_time = time.time()
-        gender_future = executor.submit(analyze_gender, face, start_time)
+        emotion_future = executor.submit(DeepFace.analyze, face, actions=['emotion'], enforce_detection=False)
+        age_future = executor.submit(DeepFace.analyze, face, actions=['age'], enforce_detection=False)
+        gender_future = executor.submit(DeepFace.analyze, face, actions=['gender'], enforce_detection=False)
   
         concurrent.futures.wait([emotion_future, age_future, gender_future])
 
-        emotion_result = emotion_future.result()
-        age_result = age_future.result()
-        gender_result = gender_future.result()
-
-        return emotion_result, age_result, gender_result
+        emotion_result = emotion_future.result()[0]['dominant_emotion']
+        age_result = age_future.result()[0]['age']
+        gender_result = gender_future.result()[0]['dominant_gender']
+        
+    return emotion_result, age_result, gender_result
 
 # สุ่มข้อความสำหรับพูดส่งเสียง
 TH_voice_id = "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens\TTS_THAI"
@@ -269,33 +248,34 @@ def store_data_to_mysql(most_similar_id, emotions, age, gender, face_encoded, fr
     else:
         print("Failed to store data to API")
 
-@app.route('/savetoDir')
-def create_image_folders_and_save_images():
-    api_endpoint = 'http://localhost:8081/uploadtofolder'
+# @app.route('/savetoDir')
+# def create_image_folders_and_save_images():
+#     api_endpoint = 'http://localhost:8081/uploadtofolder'
 
-    response = requests.get(api_endpoint)
-    image_data = response.json()
+#     response = requests.get(api_endpoint)
+#     image_data = response.json()
 
-    folder_root = "UserImage"
+#     folder_root = "UserImage"
 
-    if not os.path.exists(folder_root):
-        os.makedirs(folder_root)
-        print("Folder '{}' has been created".format(folder_root))
+#     if not os.path.exists(folder_root):
+#         os.makedirs(folder_root)
+#         print("Folder '{}' has been created".format(folder_root))
 
-    for item in image_data:
-        CSName = item["CSName"]
-        img_64 = item["img_64"]
+#     for item in image_data:
+#         CSName = item["CSName"]
+#         img_64 = item["img_64"]
 
-        CSName_path = os.path.join(folder_root, CSName)
-        if not os.path.exists(CSName_path):
-            os.makedirs(CSName_path)
+#         CSName_path = os.path.join(folder_root, CSName)
+#         if not os.path.exists(CSName_path):
+#             os.makedirs(CSName_path)
 
-        img_filename = f"{item['CSID']}.jpg"
+#         img_filename = f"{item['CSID']}.jpg"
 
-        with open(os.path.join(CSName_path, img_filename), "wb") as f:
-            f.write(base64.b64decode(img_64.split(",")[1]))
+#         with open(os.path.join(CSName_path, img_filename), "wb") as f:
+#             f.write(base64.b64decode(img_64.split(",")[1]))
 
-    return "Images saved successfully"
+#     return "Images saved successfully"
+        
 
 @app.route('/')
 def index():
@@ -304,6 +284,71 @@ def index():
 @app.route('/video_feed')
 def video_feed():
     return Response(gen_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+
+@app.route('/savetoDir', methods=['GET'])
+def create_image_folders_and_save_images():
+    api_endpoint = 'http://localhost:8081/uploadtofolder'
+    response = requests.get(api_endpoint)
+    image_data = response.json()
+
+    folder_root = "UserImage"
+    if not os.path.exists(folder_root):
+        os.makedirs(folder_root)
+        print("Folder '{}' has been created".format(folder_root))
+    else:
+        print("Folder '{}' already exists".format(folder_root))
+
+    #  ตรวจสอบข้อมูลรูปภาพและเซฟลงในโฟลเดอร์
+    for entry in image_data:
+        cs_name = entry.get('CSName')
+        # print(cs_name)
+        img_base64 = entry.get('img_64')
+        img_id = entry.get('CSID')
+        save_image_to_folder(cs_name, img_base64, img_id)
+
+    return "Images saved successfully."
+
+def save_image_to_folder(cs_name, img_base64, img_id):
+    cs_folder = os.path.join("UserImage", cs_name)
+    if not os.path.exists(cs_folder):
+        os.makedirs(cs_folder)
+
+    base64_data = img_base64.split(",")[1]
+    binary_data = base64.b64decode(base64_data)
+
+    image_path = os.path.join(cs_folder, f"{img_id}.jpg")
+    with open(image_path, 'wb') as f:
+        f.write(binary_data)
+
+
+@app.route('/deletefromDir/<user_id>', methods=['DELETE'])
+def delete_image(user_id):
+    current_directory = Path(__file__).parent
+    db_path = current_directory / 'UserImage' 
+    image_paths = glob.glob(str(db_path / '**/*.jpg'), recursive=True)
+
+    deleted = False
+    for image_path in image_paths:
+        filename = os.path.basename(image_path)
+        if filename.startswith(user_id):
+            os.remove(image_path)
+            print(f"Deleted image: {image_path}")
+            new_file_path = image_path.replace(filename, "")
+            print( new_file_path)
+            deleted = True
+
+    
+    if deleted:
+        if(len(os.listdir(new_file_path))) == 0:
+            os.rmdir(new_file_path)
+            return jsonify({"message": f"Folder '{db_path}' deleted successfully as it's empty"})
+        else:
+            return jsonify({"message": f"Images for user {user_id} deleted successfully"})
+    else:
+        return jsonify({"message": f"No images found for user {user_id}"}), 404
+  
+    return "Image Delete successfully"
+
 
 if __name__ == '__main__':
     thread = threading.Thread(target=camera_stream)
