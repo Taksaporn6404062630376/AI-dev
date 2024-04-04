@@ -297,7 +297,6 @@ def delete_image(user_id):
             print( new_file_path)
             deleted = True
 
-    
     if deleted:
         if(len(os.listdir(new_file_path))) == 0:
             os.rmdir(new_file_path)
@@ -306,9 +305,6 @@ def delete_image(user_id):
             return jsonify({"message": f"Images for user {user_id} deleted successfully"})
     else:
         return jsonify({"message": f"No images found for user {user_id}"}), 404
-  
-    return "Image Delete successfully"
-
 
 if __name__ == '__main__':
     thread = threading.Thread(target=camera_stream)

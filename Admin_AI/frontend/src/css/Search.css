@@ -1,0 +1,19 @@
+.muiSearch {
+    height: 400px;
+    width: auto;
+    margin-top: 2%;
+}
+
+.searchCon{
+    
+    display: flex;
+    justify-content: center;
+    
+}
+.makeStyles-table-5{
+    width: 200px;
+}
+
+.MuiTableBody-root{
+    width: 100px;
+}

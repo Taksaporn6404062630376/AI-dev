@@ -1,27 +1,11 @@
-FROM python:3.11.7
-
-EXPOSE 6970
-
-RUN apt-get ubdate && apt-get install -y \
-    apt-get install python3-venv \
-    libms6 \
-    libxext6 \
-    iibxrender-dev \
-    libgl1-mesa-glx \
-    espeak \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN apt-get install espeak
-
-COPY requirements.txt .
-RUN pip install -r requirements.txt
-
-RUN pip install deepface
-
-RUN pip install requests pyttsx3
+FROM python:3.9-slim-buster
 
 WORKDIR /app
 
-COPY . /app/
+COPY requirements.txt requirements.txt
 
-CMD ["python", "app.py"]
+RUN pip3 install -r requirements.txt
+
+COPY . .
+
+CMD [ "python3", "-m", "flask", "run", "--host=0.0.0.0" ]
