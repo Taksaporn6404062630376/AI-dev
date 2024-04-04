@@ -65,7 +65,7 @@ export default function Users() {
   const [academicYear, setAcademicYear] = useState('');
 
   const fetchData = (csName, semester, academicYear) => {
-    axios.get('http://localhost:8081/StartTimeDashboard', {
+    axios.get(import.meta.env.VITE_API + '/StartTimeDashboard', {
         params: {
             csName: csName,
             semester: semester, 
@@ -75,7 +75,7 @@ export default function Users() {
     .then(response => setStackedBarStartClass(response.data))
     .catch(error => console.error('Error fetching Start Class data:', error));
     
-    axios.get('http://localhost:8081/FinishTimeDashboard', {
+    axios.get(import.meta.env.VITE_API + '/FinishTimeDashboard', {
         params: {
             csName: csName,
             semester: semester, 
@@ -108,7 +108,7 @@ export default function Users() {
     // })
     // .catch(error => console.error('Error fetching data:', error));
 
-    axios.get('http://localhost:8081/csName')
+    axios.get(import.meta.env.VITE_API + '/csName')
     .then(response => {
       const csNames = response.data.map(item => item.CSName); 
       setName(csNames); 

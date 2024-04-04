@@ -1,3 +1,4 @@
+require('dotenv').config()
 const express = require("express");
 const mysql = require("mysql2");
 const cors = require("cors");
@@ -54,11 +55,18 @@ if (process.env.NODE_ENV == "production") {
   host = "mysql-server";
 }
 
+// const db = mysql.createConnection({
+//   host: "db",
+//   user: "root",
+//   password: "password",
+//   database: "ai",
+// });
+
 const db = mysql.createConnection({
-  host: "db",
-  user: "root",
-  password: "password",
-  database: "ai",
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_DATABASE,
 });
 
 // const db = mysql.createConnection({
@@ -1027,6 +1035,11 @@ app.post("/saveKiosk", (req, res) => {
   );
 });
 
-app.listen(8081, () => {
-  console.log("listening");
-});
+// app.listen(8081, () => {
+//   console.log("listening");
+// });
+
+const port = process.env.SERVER_PORT;
+app.listen(port, () => {
+  console.log(`listening: ${port}`);
+})

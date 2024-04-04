@@ -54,7 +54,7 @@ function TeacherScedule() {
 
   useEffect(() => {
     axios
-      .get("http://localhost:8081/csName")
+      .get(import.meta.env.VITE_API + "/csName")
       .then((response) => {
         setTName(response.data.map((item) => item.CSName));
       })
@@ -69,7 +69,7 @@ function TeacherScedule() {
 
   const fetchData = (showName, academicYear, semester) => {
     axios
-      .get("http://localhost:8081/TeachingSchedule", {
+      .get(import.meta.env.VITE_API + "/TeachingSchedule", {
         params: {
           semester: semester,
           academicYear: academicYear,
@@ -142,7 +142,7 @@ function TeacherScedule() {
       });
       if (confirm.isConfirmed) {
         axios
-          .delete(`http://localhost:8081/TeachingSchedule/${data.ID}`)
+          .delete(import.meta.env.VITE_API + `/TeachingSchedule/${data.ID}`)
           .then((response) => {
             console.log("Delete Success: ");
             setTSchedule((prevSchedule) =>
@@ -169,7 +169,7 @@ function TeacherScedule() {
       EndTime: endTime,
     };
     axios
-      .put(`http://localhost:8081/TeachingSchedule/${tid}`, editData)
+      .put(import.meta.env.VITE_API + `/TeachingSchedule/${tid}`, editData)
       .then((response) => {
         setIsDialogOpen(false);
         console.log("Edit Success: ", response.data);

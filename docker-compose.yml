@@ -7,7 +7,7 @@ services:
       ports:
         - "5041:80"
       environment:
-        - NODE_ENV=production
+        - VITE_API="http://192.168.15.227:4555"
       volumes:
         - ./Admin/frontend:/app/frontend
 
@@ -15,7 +15,7 @@ services:
       container_name: backend
       build: ./Admin_AI/Backend
       ports:
-        - "8081:8081"
+        - "4555:4555"
       depends_on:
         - db
       environment:

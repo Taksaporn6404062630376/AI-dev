@@ -111,10 +111,11 @@ export default function Users() {
     setSelectedFile(null);
   };
 
+  // 192.168.15.227:port
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.post("http://localhost:8081/insertSchedule", {
+      await axios.post(import.meta.env.VITE_API + "/insertSchedule", {
         data,
         courseDetails,
       });
